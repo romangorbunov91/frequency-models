@@ -20,10 +20,8 @@ def reactor_model_gain(freq, L, r, C):
 def reactor_model_gain_abs(freq, L, r, C):
    
     omega = 2 * np.pi * freq
-      
-    gain = np.sqrt((r**2 + (omega*L)**2) / ((1 - omega**2*L*C)**2 + (omega*r*C)**2))
 
-    return 20*np.log10(gain)
+    return 20*np.log10(np.sqrt((r**2 + (omega*L)**2) / ((1 - L*C*omega**2)**2 + (omega*r*C)**2)))
 
 def grad_func(freq, y, w):
     # Parameters.
@@ -33,26 +31,26 @@ def grad_func(freq, y, w):
     #R *= 6e3
     
     gain_db_dataset = reactor_model_gain_abs(freq, L, r, C)#, R)
+    
     omega = 2 * np.pi * freq   
     
     grad = np.zeros((len(w),))
     
     for k in range(len(grad)):
         if k == 0:
-            grad_dataset = omega**2*L*(1 - C*L*omega**2 + C/L*r**2) / (r**2 + (omega*L)**2)
+            grad_dataset = L*omega**2 / (r**2 + (omega*L)**2) * (1 - C*L*omega**2 + C/L*r**2)
         elif k == 1:
-            grad_dataset = r*(1 - 2*C*L*omega**2) / (r**2 + (omega*L)**2)
+            grad_dataset = r / (r**2 + (omega*L)**2) * (1 - 2*C*L*omega**2)
         elif k == 2:
-            grad_dataset = omega**2*L*(1 - C*L*omega**2 - C/L*r**2)
+            grad_dataset = L*omega**2*(1 - C*L*omega**2 - C/L*r**2)
         
-        grad_dataset *= 20/np.log(10)/((1 - omega**2*L*C)**2 + (omega*r*C)**2)
+        grad_dataset *= 20/np.log(10)/((1 - L*C*omega**2)**2 + (omega*r*C)**2)
         grad[k] = np.sum(2*(gain_db_dataset - y)*grad_dataset)
         '''
         for idx, y_val in enumerate(y):
             grad[k] += 2 * (gain_db_dataset[idx] - y_val)*grad_dataset[idx]
         '''
     return grad
-
 
 def loss_func(freq, y, w):
     # Parameters.
