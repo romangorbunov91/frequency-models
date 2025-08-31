@@ -54,19 +54,19 @@ def grad_func(freq, y, w):
         for idx, y_val in enumerate(y):
             grad[k] += 2 * (gain_db_dataset[idx] - y_val)*grad_dataset[idx]
         '''
-    return grad
+    return grad/len(freq)
 
 def loss_func(freq, y, w):
     # Parameters.
-    L = w[0] * 136e-6
-    r = w[1] * 25e-3
-    C = w[2] * 725e-12
+    L = w[0]# * 100e-6
+    r = w[1]# * 1e-3
+    C = w[2]# * 100e-12
     #R *= 6e3
     
     gain_db_dataset = reactor_model_gain_abs(freq, L, r, C)#, R)    
 
     # Функция возвращает сумму квадратов отклонений наблюдений от эталона.
-    return np.sum((gain_db_dataset - y)**2)
+    return np.sum((gain_db_dataset - y)**2)/len(freq)
 
 '''
 def grad_func(freq, y, w):
