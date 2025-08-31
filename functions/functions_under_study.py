@@ -1,4 +1,8 @@
 import numpy as np
+from enum import IntEnum
+
+class var(IntEnum):
+    freq, mag_db, ph_deg = range(3)
 
 def reactor_model_gain(freq, L, r, C):
    
