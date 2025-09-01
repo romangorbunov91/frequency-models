@@ -1,3 +1,6 @@
+# version 1.0 by romangorbunov91
+# 01-Sep-2025
+
 import numpy as np
 from enum import IntEnum
 
@@ -28,10 +31,15 @@ def reactor_model_gain_abs(freq, L, r, C):
     return 20*np.log10(np.sqrt((r**2 + (omega*L)**2) / ((1 - L*C*omega**2)**2 + (omega*r*C)**2)))
 
 def grad_func(freq, y, w):
+    # Base parameters.
+    L_b = 100e-6
+    r_b = 10e-3
+    C_b = 100e-12
+    
     # Parameters.
-    L = w[0] * 100e-6
-    r = w[1] * 10e-3
-    C = w[2] * 100e-12
+    L = w[0] * L_b
+    r = w[1] * r_b
+    C = w[2] * C_b
     #R *= 6e3
     
     gain_db_dataset = reactor_model_gain_abs(freq, L, r, C)#, R)
@@ -42,28 +50,33 @@ def grad_func(freq, y, w):
     
     for k in range(len(grad)):
         if k == 0:
-            #grad_dataset = L*omega**2 / (r**2 + (omega*L)**2) * (1 - C*L*omega**2 + C/L*r**2)# / 1e4
-            grad_dataset = L**2*omega**2 / (r**2 + (omega*L)**2) * (1 - C*L*omega**2 + C/L*r**2)
+            grad_dataset = L*omega**2 / (r**2 + (omega*L)**2) * (1 - C*L*omega**2 + C/L*r**2)
+            # Additional scaling because of derivative by L, not by w[0].
+            grad_dataset *= L_b
         elif k == 1:
-            #grad_dataset = r / (r**2 + (omega*L)**2) * (1 - 2*C*L*omega**2)# / 1e2
-            grad_dataset = r**2 / (r**2 + (omega*L)**2) * (1 - 2*C*L*omega**2)
+            grad_dataset = r / (r**2 + (omega*L)**2) * (1 - 2*C*L*omega**2)
+            # Additional scaling because of derivative by r, not by w[1].
+            grad_dataset *= r_b
         elif k == 2:
-            #grad_dataset = L*omega**2*(1 - C*L*omega**2 - C/L*r**2)# / 1e10
-            grad_dataset = C*L*omega**2*(1 - C*L*omega**2 - C/L*r**2)# / 1e10
+            grad_dataset = L*omega**2*(1 - C*L*omega**2 - C/L*r**2)
+            # Additional scaling because of derivative by C, not by w[2].
+            grad_dataset *= C_b
         
         grad_dataset *= 20/np.log(10)/((1 - L*C*omega**2)**2 + (omega*r*C)**2)
         grad[k] = np.sum(2*(gain_db_dataset - y)*grad_dataset)
-        '''
-        for idx, y_val in enumerate(y):
-            grad[k] += 2 * (gain_db_dataset[idx] - y_val)*grad_dataset[idx]
-        '''
+
     return grad/len(freq)
 
 def loss_func(freq, y, w):
+    # Base parameters.
+    L_b = 100e-6
+    r_b = 10e-3
+    C_b = 100e-12
+    
     # Parameters.
-    L = w[0] * 100e-6
-    r = w[1] * 10e-3
-    C = w[2] * 100e-12
+    L = w[0] * L_b
+    r = w[1] * r_b
+    C = w[2] * C_b
     #R *= 6e3
 
     gain_db_dataset = reactor_model_gain_abs(freq, L, r, C)#, R)    
