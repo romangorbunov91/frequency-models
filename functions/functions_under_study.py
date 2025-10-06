@@ -1,5 +1,5 @@
-# version 1.0 by romangorbunov91
-# 01-Sep-2025
+# version 1.1 by romangorbunov91
+# 06-Oct-2025
 
 import numpy as np
 from enum import IntEnum
@@ -83,6 +83,22 @@ def loss_func(freq, y, w):
 
     # Функция возвращает сумму квадратов отклонений наблюдений от эталона.
     return np.sum((gain_db_dataset - y)**2)/len(freq)
+
+def gain_db_residual_func(w, freq, y):
+    # Base parameters.
+    L_b = 100e-6
+    r_b = 10e-3
+    C_b = 100e-12
+    
+    # Parameters.
+    L = w[0] * L_b
+    r = w[1] * r_b
+    C = w[2] * C_b
+    #R *= 6e3
+    
+    gain_db_dataset = reactor_model_gain_abs(freq, L, r, C)#, R)  
+    
+    return (gain_db_dataset - y)
 
 '''
 def grad_func(freq, y, w):
