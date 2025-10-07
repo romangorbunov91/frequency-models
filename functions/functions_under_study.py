@@ -1,5 +1,5 @@
-# version 1.1 by romangorbunov91
-# 06-Oct-2025
+# version 2.0 by romangorbunov91
+# 07-Oct-2025
 
 import numpy as np
 from enum import IntEnum
@@ -7,16 +7,16 @@ from enum import IntEnum
 class var(IntEnum):
     freq, mag_db, ph_deg = range(3)
 
-def reactor_model_gain(freq, L, r, C):
+def reactor_model_gain(freq, param):
    
     s = 1j * 2 * np.pi * freq
     
+    L, r, C, R = param
+    
     # Complex gain.
-    #gain_comp = (1 /(s*C) * (r + s*L) / (1 /(s*C) + (r + s*L)) * R) / (1 /(s*C) * (r + s*L) / (1 /(s*C) + (r + s*L)) + R)
+    #gain_comp = (r + s*L) / (1 + (s*C)*(r + s*L))
     #gain_comp = 1 /(s*C) * (r + s*L) / (1 /(s*C) + (r + s*L))
-    gain_comp = (r + s*L) / (1 + (s*C)*(r + s*L))
-    #gain_comp = (r + s*L) * C
-    #gain_comp = R /(s*C) / (R + 1/(s*C)) * (r + s*L) / (R /(s*C) / (R + 1/(s*C)) + (r + s*L))
+    gain_comp = R /(s*C) / (R + 1/(s*C)) * (r + s*L) / (R /(s*C) / (R + 1/(s*C)) + (r + s*L))
     
     # Magnitude.
     gain_abs = 20*np.log10(np.abs(gain_comp))
@@ -24,11 +24,13 @@ def reactor_model_gain(freq, L, r, C):
 
     return [gain_abs, gain_phase]
 
-def reactor_model_gain_abs(freq, L, r, C):
+def reactor_model_gain_abs(freq, param):
    
     omega = 2 * np.pi * freq
-
-    return 20*np.log10(np.sqrt((r**2 + (omega*L)**2) / ((1 - L*C*omega**2)**2 + (omega*r*C)**2)))
+    L, r, C, R = param
+    
+    return 20*np.log10(R*r/(R+r))+20*np.log10(np.sqrt((1 + (omega*L/r)**2) / ((1 - L*C*R/(R+r)*omega**2)**2 + (omega*(r*C+L/R)*R/(R+r))**2)))
+    #return 20*np.log10(np.sqrt((1 + (omega*L/r)**2) / ((1 - L*C*omega**2)**2 + (omega*r*C)**2)))
 
 def grad_func(freq, y, w):
     # Base parameters.
@@ -40,9 +42,10 @@ def grad_func(freq, y, w):
     L = w[0] * L_b
     r = w[1] * r_b
     C = w[2] * C_b
-    #R *= 6e3
+    R = 1e12
     
-    gain_db_dataset = reactor_model_gain_abs(freq, L, r, C)#, R)
+    param = [L, r, C, R]
+    gain_db_dataset = reactor_model_gain_abs(freq, param)
     
     omega = 2 * np.pi * freq   
     
@@ -77,9 +80,10 @@ def loss_func(freq, y, w):
     L = w[0] * L_b
     r = w[1] * r_b
     C = w[2] * C_b
-    #R *= 6e3
+    R = 1e12
 
-    gain_db_dataset = reactor_model_gain_abs(freq, L, r, C)#, R)    
+    param = [L, r, C, R]
+    gain_db_dataset = reactor_model_gain_abs(freq, param)
 
     # Функция возвращает сумму квадратов отклонений наблюдений от эталона.
     return np.sum((gain_db_dataset - y)**2)/len(freq)
@@ -89,14 +93,16 @@ def gain_db_residual_func(w, freq, y):
     L_b = 100e-6
     r_b = 10e-3
     C_b = 100e-12
+    R_b = 10e3
     
     # Parameters.
     L = w[0] * L_b
     r = w[1] * r_b
     C = w[2] * C_b
-    #R *= 6e3
-    
-    gain_db_dataset = reactor_model_gain_abs(freq, L, r, C)#, R)  
+    R = w[3] * R_b
+
+    param = [L, r, C, R]
+    gain_db_dataset = reactor_model_gain_abs(freq, param)
     
     return (gain_db_dataset - y)
 
